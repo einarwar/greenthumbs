@@ -14,6 +14,10 @@ from collections import deque
 from PIL import Image, ImageTk
 from bt import Device, discover_btle_devices
 
+
+device_handles = {"WATERING_TIME": 0x000b, "MEASURING_INTERVAL": 0x000d, "THRESH_LOW": 0x000f, "THRESH_HIGH": 0x0011}
+
+
 class Reciever_thread(threading.Thread):
     def __init__(self, GUI):
         threading.Thread.__init__(self)
@@ -32,7 +36,7 @@ class GUI:
         self.master = master
         #Discover BTLE devices
         #self.device = Device()
-        #self.devices = discover_btle_devices()
+        self.devices = discover_btle_devices()
         #self.device_names = [dev.name_text for dev in self.devices]
         #self.n_devices = len(self.devices)
 
@@ -94,7 +98,6 @@ class GUI:
         self.text_watering_time.grid(row=0, column=0)
 
         self.watering_time_stringvar = Tkinter.StringVar()
-        self.watering_time_stringvar.set("5000")
         self.parameter_watering_time = Tkinter.Entry(self.parameter_sidebar, textvar=self.watering_time_stringvar)
         self.parameter_watering_time.grid(row=0, column=1)
 
@@ -102,7 +105,6 @@ class GUI:
         self.text_measuring_interval.grid(row=1, column=0)
 
         self.measuring_interval_stringvar = Tkinter.StringVar()
-        self.measuring_interval_stringvar.set("3000")
         self.parameter_measuring_interval = Tkinter.Entry(self.parameter_sidebar, textvar=self.measuring_interval_stringvar)
         self.parameter_measuring_interval.grid(row=1,column=1)
 
@@ -110,7 +112,6 @@ class GUI:
         self.text_thresh_low.grid(row=2,column=0)
 
         self.thresh_low_stringvar = Tkinter.StringVar()
-        self.thresh_low_stringvar.set("255")
         self.parameter_thresh_low = Tkinter.Entry(self.parameter_sidebar, textvar=self.thresh_low_stringvar)
         self.parameter_thresh_low.grid(row=2,column=1)
 
@@ -118,10 +119,10 @@ class GUI:
         self.text_thresh_high.grid(row=3,column=0)
 
         self.thresh_high_stringvar = Tkinter.StringVar()
-        self.thresh_high_stringvar.set("1500")
         self.parameter_thresh_high = Tkinter.Entry(self.parameter_sidebar, textvar=self.thresh_high_stringvar)
         self.parameter_thresh_high.grid(row=3,column=1)
 
+        self.refresh_parameters_from_device()
         self.refresh_button = Tkinter.Button(self.parameter_sidebar, text="Refresh", command=self.refresh_parameters_from_device)
         self.refresh_button.grid(row=4,column=0)
         self.apply_button = Tkinter.Button(self.parameter_sidebar, text="Apply", command=self.apply_parameters_to_device)
@@ -145,17 +146,17 @@ class GUI:
 
     def refresh_parameters_from_device(self):
         #Read handle values from device characteristics
-        #self.thresh_high_stringvar.set(self.device.read(handle=0))
-        #self.thresh_low_stringvar.set(self.device.read(handle=1))
-        #self.measuring_interval_stringvar.set(self.device.read(handle=2))
-        #self.watering_time_stringvar.set(self.device.read(handle=3))
+        self.thresh_high_stringvar.set(self.devices[0].read(device_handles["THRESH_HIGH"]))
+        self.thresh_low_stringvar.set(self.devices[0].read(device_handles["THRESH_LOW"]))
+        self.measuring_interval_stringvar.set(self.devices[0].read(device_handles["MEASURING_INTERVAL"]))
+        self.watering_time_stringvar.set(self.devices[0].read(device_handles["WATERING_TIME"]))
         print("Parameters refreshed")
 
     def apply_parameters_to_device(self):
-        #self.device.write(handle, self.thresh_high_stringvar)
-        #self.device.write(handle, self.thresh_low_stringvar)
-        #self.device.write(handle, self.measuring_interval_stringvar)
-        #self.device.write(handle, self.watering_time_stringvar)
+        self.devices[0].write(device_handles["THRESH_HIGH"], self.thresh_high_stringvar.get())
+        self.devices[0].write(device_handles["THRESH_LOW"], self.thresh_low_stringvar.get())
+        self.devices[0].write(device_handles["MEASURING_INTERVAL"], self.measuring_interval_stringvar.get())
+        self.devices[0].write(device_handles["WATERING_TIME"], self.watering_time_stringvar.get())
         print("Parameters updated")
 
 def animate(i):

@@ -12,7 +12,6 @@ import Tkinter
 
 
 accepted_uuids = ["00:1E:C0:22:A8:DB", "00:1E:C0:22:A8:FB"]
-point_info_handle = 0x000b
 
 class Device():
     def __init__(self, address, info):
@@ -53,11 +52,11 @@ class Device():
     def measure_now(self):
         self.MEASURE_NOW_FLAG = True
 
-    def read(self):
-        return self.reader.request_data()
+    def read(self, handle):
+        return self.reader.request_data(handle)
 
-    def write(self, data):
-        self.reader.send_data(data)
+    def write(self, handle, data):
+        self.reader.send_data(handle,data)
 
 class Reader(object):
     def __init__(self, address):
@@ -72,11 +71,12 @@ class Reader(object):
         self.requester.connect(True)
         print("OK!")
 
-    def request_data(self):
-        return self.requester.read_by_handle(point_info_handle)[0]
+    def request_data(self, handle):
+        return self.requester.read_by_handle(handle)[0]
 
-    def send_data(self, data):
-        self.requester.write_by_handle(point_info_handle, str(bytearray([data])))
+    def send_data(self, handle, data):
+        #self.requester.write_by_handle(handle, str(bytearray([data])))
+        self.requester.write_by_handle(handle, data)
 
 
 def discover_btle_devices(adapter="hci0"):
@@ -85,7 +85,7 @@ def discover_btle_devices(adapter="hci0"):
     print("Found {} devices".format(len(list(devices.items()))))
     for address, name in list(devices.items()):
         if address in accepted_uuids:
-            print("Found device with address: {}".format(address))
+            print("Found device with address: {} that is accpeted, good job!".format(address))
 
         else:
             print("Device with address {} not listed in accepted_uuids. If you want it to play, add it to the accepted uuids".format(address))

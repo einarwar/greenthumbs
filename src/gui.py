@@ -14,6 +14,10 @@ from collections import deque
 from PIL import Image, ImageTk
 from bt import Device, discover_btle_devices
 
+
+device_handles = {"WATERING_TIME": 0x000b, "MEASURING_INTERVAL": 0x000d, "THRESH_LOW": 0x000f, "THRESH_HIGH": 0x0011}
+
+
 class Reciever_thread(threading.Thread):
     def __init__(self, GUI):
         threading.Thread.__init__(self)
@@ -32,7 +36,7 @@ class GUI:
         self.master = master
         #Discover BTLE devices
         #self.device = Device()
-        #self.devices = discover_btle_devices()
+        self.devices = discover_btle_devices()
         #self.device_names = [dev.name_text for dev in self.devices]
         #self.n_devices = len(self.devices)
 
@@ -145,17 +149,17 @@ class GUI:
 
     def refresh_parameters_from_device(self):
         #Read handle values from device characteristics
-        #self.thresh_high_stringvar.set(self.device.read(handle=0))
-        #self.thresh_low_stringvar.set(self.device.read(handle=1))
-        #self.measuring_interval_stringvar.set(self.device.read(handle=2))
-        #self.watering_time_stringvar.set(self.device.read(handle=3))
+        self.thresh_high_stringvar.set(self.devices[0].read(device_handles["THRESH_HIGH"]))
+        self.thresh_low_stringvar.set(self.devices[0].read(device_handles["THRESH_LOW"]))
+        self.measuring_interval_stringvar.set(self.devices[0].read(device_handles["MEASURING_INTERVAL"]))
+        self.watering_time_stringvar.set(self.devices[0].read(device_handles["WATERING_TIME"]))
         print("Parameters refreshed")
 
     def apply_parameters_to_device(self):
-        #self.device.write(handle, self.thresh_high_stringvar)
-        #self.device.write(handle, self.thresh_low_stringvar)
-        #self.device.write(handle, self.measuring_interval_stringvar)
-        #self.device.write(handle, self.watering_time_stringvar)
+        self.devices[0].write(device_handles["THRESH_HIGH"], self.thresh_high_stringvar.get())
+        self.devices[0].write(device_handles["THRESH_LOW"], self.thresh_low_stringvar.get())
+        self.devices[0].write(device_handles["MEASURING_INTERVAL"], self.measuring_interval_stringvar.get())
+        self.devices[0].write(device_handles["WATERING_TIME"], self.watering_time_stringvar.get())
         print("Parameters updated")
 
 def animate(i):

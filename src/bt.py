@@ -14,15 +14,8 @@ import Tkinter
 accepted_uuids = ["00:1E:C0:22:A8:DB", "00:1E:C0:22:A8:FB"]
 
 class Device():
-    def __init__(self, address, info):
+    def __init__(self, address):
         self.address = address
-        self.appearance = info["appearance"]
-        self.flags = info["flags"]
-
-        self.name_text = info["name"]
-        self.name = Tkinter.StringVar()
-        self.name.set(self.name_text)
-
         self.THRESH_LOW = 0
         self.THRESH_HIGH = 0
         self.WATERING_TIME_MS = 0
@@ -31,7 +24,6 @@ class Device():
         self.MEASURE_NOW_FLAG = False
         self.WATER_NOW_FLAG = False
 
-        self.uuids = info["uuids"]
         self.reader = Reader(address)
 
     def set_THRESH_LOW(self, val):
@@ -71,6 +63,12 @@ class Reader(object):
         self.requester.connect(True)
         print("OK!")
 
+    def disconnect(self):
+        print("Disconnecting...",end=' ')
+        sys.stdout.flush()
+        self.requester.disconnect()
+        print("OK!")
+
     def request_data(self, handle):
         return self.requester.read_by_handle(handle)[0]
 
@@ -89,7 +87,7 @@ def discover_btle_devices(adapter="hci0"):
 
         else:
             print("Device with address {} not listed in accepted_uuids. If you want it to play, add it to the accepted uuids".format(address))
-    d = [Device(address, name) for address, name in list(devices.items()) if address in accepted_uuids]
+    d = [Device(address) for address, _ in list(devices.items()) if address in accepted_uuids]
     return d
 
 

@@ -16,14 +16,11 @@ from PIL import Image, ImageTk
 from bt import Device, discover_btle_devices
 from numbers import Number
 
-device_handles = {  "WATERING_TIME": 0x000b,
-                    "MEASURING_INTERVAL": 0x000d,
+device_handles = {  "NEW_DATA": 0x000b,
+                    "NEW_DATA_FLAG": 0x000d,
                     "THRESH_LOW": 0x000f,
-                    "THRESH_HIGH": 0x0011,
-                    "NEW_DATA": 0x000b,
-                    "WATER_NOW_FLAG": 0x0015,
-                    "MEASURE_NOW_FLAG": 0x0017,
-                    "NEW_DATA_FLAG": 0x000d
+                    "MEASURING_INTERVAL": 0x0011,
+                    "WATERING_TIME": 0x0013,
                     }
 
 
@@ -44,19 +41,15 @@ class Reciever_thread(threading.Thread):
             try:
                 got_new_data = self.GUI.devices[0].read(device_handles["NEW_DATA_FLAG"])
                 if int(got_new_data):
-                    self.GUI.data_flag_stringvar.set("1");
-                    print("New data found!\n")
+
+                    self.GUI.last_measurement_stringvar.set(("Last measurement: " + time.ctime()))
                     data = self.GUI.devices[0].read(device_handles["NEW_DATA"])
                     try:
                         int_data = int(data)
-                        print int_data
-                        print("Data is a number, writing to file...\n")
                         write_data_to_textfile(int(int_data))
                     except:
                         print("Data is not number, it is: {}".format(data))
-                    self.GUI.data_flag_stringvar.set("0")
                     self.GUI.devices[0].write(device_handles["NEW_DATA_FLAG"], "0")
-                    print("Done")
                     time.sleep(2)
             except Exception as e:
                 print("Exception: {}".format(e))
@@ -66,7 +59,7 @@ class Reciever_thread(threading.Thread):
                 except:
                     self.doRun = False
 class GUI:
-    def __init__(self, master, reset_data=True):
+    def __init__(self, master, reset_data=False):
         if reset_data:
             with open("sampleText.txt", 'w') as f:
                 pass
@@ -75,10 +68,14 @@ class GUI:
         #Discover BTLE devices
         self.devices = discover_btle_devices()
 
+        #Get parameters from devices
+        self.get_watering_threshold()
+        self.get_watering_time()
+        self.get_measuring_interval()
 
         #Set GUI title
         master.title("Greenthumbs")
-        master.configure(background='green')
+        master.configure(background='gray')
 
         #Set up parameter_sidebar
         self.setup_parameter_sidebar()
@@ -115,7 +112,6 @@ class GUI:
     def setup_buttons(self):
         self.buttons = Tkinter.LabelFrame(self.master)
         self.buttons.grid(row=1,column=0)
-        self.buttons.configure(background='green')
 
         self.close_button = Tkinter.Button(self.buttons, text="Close", command=self.quit)
         self.close_button.grid(row=0, column = 0)
@@ -127,62 +123,54 @@ class GUI:
         self.water_button.grid(row=0, column = 2)
 
     def setup_parameter_sidebar(self):
-        self.parameter_sidebar = Tkinter.LabelFrame(self.master, text="Set parameters", padx=5, pady=5)
+        self.parameter_sidebar = Tkinter.LabelFrame(self.master, text="Device parameters", padx=5, pady=5)
         self.parameter_sidebar.grid(row=0, column = 0)
 
         self.text_watering_time = Tkinter.Label(self.parameter_sidebar, text=("Watering duration (ms)"))
         self.text_watering_time.grid(row=0, column=0)
 
         self.watering_time_stringvar = Tkinter.StringVar()
-        self.parameter_watering_time = Tkinter.Entry(self.parameter_sidebar, textvar=self.watering_time_stringvar)
+        self.watering_time_stringvar.set(self.WATERING_TIME)
+        self.parameter_watering_time = Tkinter.Label(self.parameter_sidebar, textvar=self.watering_time_stringvar)
         self.parameter_watering_time.grid(row=0, column=1)
 
         self.text_measuring_interval = Tkinter.Label(self.parameter_sidebar, text="Measuring interval (seconds)")
         self.text_measuring_interval.grid(row=1, column=0)
 
         self.measuring_interval_stringvar = Tkinter.StringVar()
-        self.parameter_measuring_interval = Tkinter.Entry(self.parameter_sidebar, textvar=self.measuring_interval_stringvar)
+        self.measuring_interval_stringvar.set(self.MEASURING_INTERVAL)
+        self.parameter_measuring_interval = Tkinter.Label(self.parameter_sidebar, textvar=self.measuring_interval_stringvar)
         self.parameter_measuring_interval.grid(row=1,column=1)
 
-        self.text_thresh_low = Tkinter.Label(self.parameter_sidebar, text="Low threshold")
+        self.text_thresh_low = Tkinter.Label(self.parameter_sidebar, text="Watering threshold:")
         self.text_thresh_low.grid(row=2,column=0)
 
         self.thresh_low_stringvar = Tkinter.StringVar()
-        self.parameter_thresh_low = Tkinter.Entry(self.parameter_sidebar, textvar=self.thresh_low_stringvar)
+        self.thresh_low_stringvar.set(self.THRESH_LOW)
+        self.parameter_thresh_low = Tkinter.Label(self.parameter_sidebar, textvar=self.thresh_low_stringvar)
         self.parameter_thresh_low.grid(row=2,column=1)
 
-        self.text_thresh_high = Tkinter.Label(self.parameter_sidebar, text="High threshold")
-        self.text_thresh_high.grid(row=3,column=0)
 
-        self.thresh_high_stringvar = Tkinter.StringVar()
-        self.parameter_thresh_high = Tkinter.Entry(self.parameter_sidebar, textvar=self.thresh_high_stringvar)
-        self.parameter_thresh_high.grid(row=3,column=1)
+    def get_watering_threshold(self):
+        self.THRESH_LOW = self.devices[0].read(device_handles["THRESH_LOW"])
 
-        self.data_flag_stringvar = Tkinter.StringVar()
-        self.parameter_data_flag = Tkinter.Entry(self.parameter_sidebar, textvar=self.data_flag_stringvar)
-        self.parameter_data_flag.grid(row=5,column=0)
+    def get_measuring_interval(self):
+        self.MEASURING_INTERVAL = self.devices[0].read(device_handles["MEASURING_INTERVAL"])
 
-        self.data_stringvar = Tkinter.StringVar()
-        self.parameter_data = Tkinter.Entry(self.parameter_sidebar, textvar=self.data_stringvar)
-        self.parameter_data.grid(row=5,column=1)
-
-
-        #self.refresh_parameters_from_device()
-
-        #self.refresh_button = Tkinter.Button(self.parameter_sidebar, text="Refresh", command=self.refresh_parameters_from_device)
-        #self.refresh_button.grid(row=4,column=0)
-        #self.apply_button = Tkinter.Button(self.parameter_sidebar, text="Apply", command=self.apply_parameters_to_device)
-        #self.apply_button.grid(row=4, column=1)
-
+    def get_watering_time(self):
+        self.WATERING_TIME = self.devices[0].read(device_handles["WATERING_TIME"])
 
 
     def setup_graph(self):
         self.graph = Tkinter.LabelFrame(self.master, text="Measurement data", padx=5, pady=5)
         self.graph.grid(row=0,column=1)
-        self.graph.configure(background='green')
+        self.graph.configure(background='gray')
         self.f = Figure(figsize=(5,4),dpi=100)
         self.a1 = self.f.add_subplot(111)
         self.a1.set_ylim([0,1024])
+        self.xlim_low = 0
+        self.xlim_hi = 10
+        #self.a1.set_xlim([self.xlim_low,self.xlim_hi])
         canvas = FigureCanvasTkAgg(self.f,self.graph)
         canvas.show()
         canvas.get_tk_widget().pack(expand=True)
@@ -192,24 +180,6 @@ class GUI:
         self.text_last_measurement = Tkinter.Label(self.graph, textvar=self.last_measurement_stringvar)
         self.text_last_measurement.pack()
 
-    def refresh_parameters_from_device(self):
-        #Read handle values from device characteristics
-        self.thresh_high_stringvar.set(self.devices[0].read(device_handles["THRESH_HIGH"]))
-        self.thresh_low_stringvar.set(self.devices[0].read(device_handles["THRESH_LOW"]))
-        self.measuring_interval_stringvar.set(self.devices[0].read(device_handles["MEASURING_INTERVAL"]))
-        self.watering_time_stringvar.set(self.devices[0].read(device_handles["WATERING_TIME"]))
-        self.data_flag_stringvar.set(self.devices[0].read(device_handles["NEW_DATA_FLAG"]))
-        self.data_stringvar.set(self.devices[0].read(device_handles["NEW_DATA"]))
-        print("Parameters refreshed")
-
-    def apply_parameters_to_device(self):
-        self.devices[0].write(device_handles["THRESH_HIGH"], self.thresh_high_stringvar.get())
-        self.devices[0].write(device_handles["THRESH_LOW"], self.thresh_low_stringvar.get())
-        self.devices[0].write(device_handles["MEASURING_INTERVAL"], self.measuring_interval_stringvar.get())
-        self.devices[0].write(device_handles["WATERING_TIME"], self.watering_time_stringvar.get())
-        self.devices[0].write(device_handles["NEW_DATA_FLAG"], self.data_flag_stringvar.get())
-        self.devices[0].write(device_handles["NEW_DATA"], self.data_stringvar.get())
-        print("Parameters updated")
 
     def update_graph_with_data(self):
         write_data_to_textfile(self.devices[0].read(device_handles["NEW_DATA"]))
@@ -225,9 +195,12 @@ def animate(i):
             xar.append(int(x))
             yar.append(int(y))
             x += 1
+            #if x % 10 == 0 and x > 1:
+            #    my_gui.xlim_low += 10
+            #    my_gui.xlim_hi += 10
     my_gui.a1.clear
-    my_gui.a1.axhline(y=300,linewidth=1, ls='dotted', color='r')
-
+    my_gui.a1.axhline(y=my_gui.THRESH_LOW,linewidth=1, ls='dotted', color='r')
+    #my_gui.a1.set_xlim([my_gui.xlim_low, my_gui.xlim_hi])
     my_gui.a1.plot(xar,yar,'g-')
 
 
